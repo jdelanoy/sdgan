@@ -3,6 +3,8 @@
 assets/
 data
 debug.sh
-train
+train_*
 web/bundle
 web/ckpts
+began/logs/
+nohup.out
