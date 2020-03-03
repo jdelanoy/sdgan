@@ -1,10 +1,12 @@
 from collections import defaultdict
-import cPickle as pickle
+import  pickle
 import math
 import os
 import time
 
-import tensorflow as tf
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 from dcgan import DCGANGenerator64x64, SDDCGANDiscriminator64x64
 from util import str2bool, decode_png_observation, encode_png_observation
@@ -165,15 +167,15 @@ def train(
   G_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='G')
 
   # Print G summary
-  print '-' * 80
-  print 'Generator vars'
+  print ('-' * 80)
+  print ('Generator vars')
   nparams = 0
   for v in G_vars:
     v_shape = v.get_shape().as_list()
     v_n = reduce(lambda x, y: x * y, v_shape)
     nparams += v_n
-    print '{} ({}): {}'.format(v.get_shape().as_list(), v_n, v.name)
-  print 'Total params: {} ({:.2f} MB)'.format(nparams, (float(nparams) * 4) / (1024 * 1024))
+    print ('{} ({}): {}'.format(v.get_shape().as_list(), v_n, v.name))
+  print ('Total params: {} ({:.2f} MB)'.format(nparams, (float(nparams) * 4) / (1024 * 1024)))
 
   # Make image summaries
   for i in xrange(k):
@@ -185,16 +187,16 @@ def train(
   D_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='D')
 
   # Print D summary
-  print '-' * 80
-  print 'Discriminator vars'
+  print ('-' * 80)
+  print ('Discriminator vars')
   nparams = 0
   for v in D_vars:
     v_shape = v.get_shape().as_list()
     v_n = reduce(lambda x, y: x * y, v_shape)
     nparams += v_n
-    print '{} ({}): {}'.format(v.get_shape().as_list(), v_n, v.name)
-  print 'Total params: {} ({:.2f} MB)'.format(nparams, (float(nparams) * 4) / (1024 * 1024))
-  print '-' * 80
+    print ('{} ({}): {}'.format(v.get_shape().as_list(), v_n, v.name))
+  print ('Total params: {} ({:.2f} MB)'.format(nparams, (float(nparams) * 4) / (1024 * 1024)))
+  print ('-' * 80)
 
   # Make fake discriminator
   with tf.name_scope('D_G_z'), tf.variable_scope('D', reuse=True):
@@ -300,11 +302,14 @@ def train(
       global_step=tf.train.get_or_create_global_step())
   D_train_op = D_opt.minimize(D_loss, var_list=D_vars)
 
+  config = tf.ConfigProto()
+  config.gpu_options.allow_growth = True
   # Run training
   with tf.train.MonitoredTrainingSession(
       checkpoint_dir=train_dir,
       save_checkpoint_secs=save_secs,
-      save_summaries_secs=summary_secs) as sess:
+      save_summaries_secs=summary_secs,
+      config=config) as sess:
     while True:
       # Train discriminator
       for i in xrange(D_iters):
@@ -374,7 +379,7 @@ def preview(
   while True:
     latest_ckpt_fp = tf.train.latest_checkpoint(train_dir)
     if latest_ckpt_fp != ckpt_fp:
-      print 'Preview: {}'.format(latest_ckpt_fp)
+      print ('Preview: {}'.format(latest_ckpt_fp))
 
       with tf.Session() as sess:
         saver.restore(sess, latest_ckpt_fp)
@@ -386,7 +391,7 @@ def preview(
 
       summary_writer.add_summary(_fetches['G_z_grid_summary'], _fetches['step'])
 
-      print 'Done'
+      print ('Done')
 
       ckpt_fp = latest_ckpt_fp
 
@@ -538,12 +543,12 @@ if __name__ == '__main__':
 
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('mode', type=str, choices=['train', 'preview', 'infer'])
-  parser.add_argument('train_dir', type=str,
-      help='Training directory')
+  parser.add_argument('--mode', type=str, choices=['train', 'preview', 'infer'], default='train')
+  parser.add_argument('--train_dir', type=str,
+      help='Training directory', default='./train_shoes/')
   parser.add_argument('--data_dir', type=str,
       help='Data directory')
-  parser.add_argument('--data_set', type=str, choices=['msceleb12k', 'shoes4k'],
+  parser.add_argument('--data_set', type=str, choices=['msceleb12k', 'shoes4k','material'],
       help='Which dataset')
   parser.add_argument('--data_id_name_tsv_fp', type=str,
       help='(Optional) alternate names for ids')
@@ -579,8 +584,8 @@ if __name__ == '__main__':
       help='Number of distinct observation vectors to preview')
 
   parser.set_defaults(
-    data_dir=None,
-    data_set=None,
+    data_dir="./data/shoes4k",
+    data_set="shoes4k",
     data_id_name_tsv_fp=None,
     data_nids=-1,
     model_d_i=50,
@@ -627,13 +632,19 @@ if __name__ == '__main__':
     height = 64
     width = 64
     nch = 3
+  elif args.data_set == 'material':
+    data_extension = 'png'
+    fname_to_named_id = lambda fn: fn.rsplit('@', 2)[0]
+    height = 64
+    width = 64
+    nch = 3
   else:
     raise NotImplementedError()
 
   # Find group fps and make splits
   if split is not None:
-    print 'Finding files...'
-    named_id_to_fps = defaultdict(list)
+    print ('Finding files...')
+    named_id_to_fps = defaultdict(list) #store id -> filepath
     glob_fp = os.path.join(args.data_dir, split, '*.{}'.format(data_extension))
     data_fps = glob.glob(glob_fp)
     for data_fp in sorted(data_fps):
@@ -646,12 +657,12 @@ if __name__ == '__main__':
       named_id_to_fps[named_id].append(data_fp)
 
     if len(named_id_to_fps) == 0:
-      print 'No observations found for {}'.format(glob_fp)
+      print ('No observations found for {}'.format(glob_fp))
       sys.exit(1)
     else:
-      print 'Found {} identities with average {} observations'.format(
+      print ('Found {} identities with average {} observations'.format(
           len(named_id_to_fps.keys()),
-          np.mean([len(o) for o in named_id_to_fps.values()]))
+          np.mean([len(o) for o in named_id_to_fps.values()])))
 
   if args.mode == 'train':
     # Save inference graph first

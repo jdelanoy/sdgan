@@ -16,8 +16,10 @@ def str2bool(v):
 # Decode PNG to [-1, 1] float
 def decode_png_observation(png_fp):
   png_bin = tf.read_file(png_fp)
-  png = tf.image.decode_png(png_bin)
-
+  png = tf.image.decode_image(png_bin, channels=3)
+  # assertion=tf.assert_equal(tf.shape(png)[-1],3,message="image  "+png_fp+" should have at least 3 channels")
+  # with tf.control_dependencies([assertion]):
+  #   png=tf.identity(png)
   png = tf.cast(png, tf.float32)
   png /= 256.
   png *= 2.
