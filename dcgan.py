@@ -148,22 +148,23 @@ def SDDCGANDiscriminator64x64(x, dim=128, batchnorm=True, siamese=True, collate=
     nlayers = int(collate.split('_')[1])
     assert nlayers <= 2
 
-    outputs = tf.concat(outputs_instances, axis=3)
+    if(len(outputs_instances) > 1):
+      outputs = tf.concat(outputs_instances, axis=3)
 
-    dim_mul = _D_DIM_MUL[-1]
-    for i in range(nlayers):
-      with tf.variable_scope('collate_conv_{}'.format(i)):
-        outputs = tf.layers.conv2d(
-            outputs,
-            dim * dim_mul,
-            [3, 3],
-            strides=(2, 2),
-            padding='SAME',
-            kernel_initializer=weight_init)
-        if batchnorm:
-          outputs = tf.layers.batch_normalization(outputs, training=True)
-      outputs = lrelu(outputs)
-      dim_mul /= 2
+      dim_mul = _D_DIM_MUL[-1]
+      for i in range(nlayers):
+        with tf.variable_scope('collate_conv_{}'.format(i)):
+          outputs = tf.layers.conv2d(
+              outputs,
+              dim * dim_mul,
+              [3, 3],
+              strides=(2, 2),
+              padding='SAME',
+              kernel_initializer=weight_init)
+          if batchnorm:
+            outputs = tf.layers.batch_normalization(outputs, training=True)
+        outputs = lrelu(outputs)
+        dim_mul /= 2
 
     outputs = tf.reshape(outputs, [batch_size, -1])
   else:
